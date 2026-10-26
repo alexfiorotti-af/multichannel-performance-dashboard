@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Painel de Performance</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root{--bg:#0e1a23;--card:#16232e;--card2:#1b2b38;--line:#2a3b48;--ink:#e8eef3;--muted:#8ea0ad;--navy:#1F4E79;--cyan:#1BB7E8;--orange:#F15A24;--green:#37c26b;--greenbg:#123021;--amber:#e0a52e;--amberbg:#2f2812;--red:#e0584a;--redbg:#2f1613;}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+  header{background:#0b141b;padding:12px 22px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .brand{display:flex;align-items:center;gap:14px}.logo{height:34px}
+  .brand h1{font-size:16px;font-weight:600}.brand small{color:var(--muted);font-size:11px}
+  .live{font-size:11px;color:var(--muted)}.live b{color:var(--cyan)}
+  .toolbar{background:var(--card);border-bottom:1px solid var(--line);padding:12px 22px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .grp{display:flex;align-items:center;gap:7px}
+  .grp label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+  .seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+  .seg button{border:0;background:var(--card2);padding:7px 12px;cursor:pointer;font-size:12.5px;color:var(--muted)}
+  .seg button.active{background:var(--navy);color:#fff}
+  input[type=date],input[type=number],input[type=text]{border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px;color:var(--ink);background:var(--card2)}
+  .switch{display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px}
+  .switch input{width:36px;height:20px;appearance:none;background:#3a4c59;border-radius:20px;position:relative;cursor:pointer;transition:.2s}
+  .switch input:checked{background:var(--cyan)}
+  .switch input::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:.2s}
+  .switch input:checked::after{left:18px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);border-radius:20px;padding:5px 11px;font-size:12px;cursor:pointer;color:var(--muted);background:var(--card2);user-select:none}
+  .chip.on{background:#0e3a4d;border-color:var(--cyan);color:var(--cyan);font-weight:600}
+  main{padding:20px 22px;max-width:1300px;margin:0 auto}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
+  .kpi .lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;font-weight:600}
+  .kpi .val{font-size:23px;font-weight:700;margin:6px 0 2px;color:#fff}
+  .kpi .delta{font-size:12px;font-weight:600;display:inline-flex;gap:4px;padding:2px 8px;border-radius:20px}
+  .kpi .prev{font-size:11px;color:var(--muted);margin-top:4px}
+  .up{color:var(--green);background:var(--greenbg)}.flat{color:var(--amber);background:var(--amberbg)}.down{color:var(--red);background:var(--redbg)}
+  .kpi .bar{position:absolute;left:0;top:0;bottom:0;width:4px}
+  .bar.up{background:var(--green)}.bar.flat{background:var(--amber)}.bar.down{background:var(--red)}
+  .grid2{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-bottom:20px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .card h3{font-size:14px;color:var(--cyan);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
+  .card h3 small{font-weight:400;color:var(--muted);font-size:11px}
+  .chartbox{position:relative;height:250px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:10.5px;text-transform:uppercase}
+  .ftable td.hi{color:var(--orange);font-weight:700}
+  .ftable tr.loss td{color:#e0a0a0}
+  .pc{font-weight:700}.pc.up{color:var(--green)}.pc.flat{color:var(--amber)}.pc.down{color:var(--red)}
+  .mediagrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mtile{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .mtile .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.3px}
+  .mtile .v{font-size:19px;font-weight:700;color:#fff;margin-top:3px}
+  .mtile .d{font-size:11px;font-weight:600;margin-top:2px}
+  .entry{display:grid;grid-template-columns:1.15fr 1fr;gap:16px;margin-bottom:22px}
+  .form-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:10px}
+  .field label{display:block;font-size:10.5px;color:var(--muted);margin-bottom:3px;font-weight:600}.field input{width:100%}
+  .btn{background:var(--cyan);color:#04222e;border:0;border-radius:8px;padding:9px 16px;font-size:13px;cursor:pointer;font-weight:700}
+  .btn.ghost{background:transparent;color:var(--cyan);border:1px solid var(--cyan)}
+  .tbl-wrap{max-height:250px;overflow:auto}
+  .card>table{min-width:100%}
+  .src{font-size:10px;color:var(--muted);margin-top:8px}
+  .legend{display:flex;gap:16px;align-items:center;font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+.tbl-wrap table thead th{position:sticky;top:0;background:var(--card2);z-index:2}
+  #adsTable thead th,#dataTable thead th{cursor:pointer;user-select:none}
+  #adsTable thead th:hover,#dataTable thead th:hover{color:var(--cyan)}
+  footer{padding:16px 22px;color:var(--muted);font-size:11px;text-align:center;border-top:1px solid var(--line);background:#0b141b}
+.tabs{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--line)}
+  .tab{background:none;border:0;color:var(--muted);font-size:13.5px;font-weight:600;padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent}
+  .tab.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+  @media(max-width:900px){.grid2,.entry{grid-template-columns:1fr}}
+  @media(max-width:768px){
+    header{padding:10px 14px}
+    .toolbar{padding:10px 14px;gap:12px}
+    main{padding:14px}
+    .kpis{grid-template-columns:repeat(2,1fr);gap:10px}
+    .kpi{padding:11px 12px}
+    .kpi .val{font-size:20px}
+    .mediagrid{grid-template-columns:1fr 1fr}
+    .grp{flex-wrap:wrap}
+    .card{padding:13px;overflow-x:auto}
+    .card h3{font-size:13px;flex-wrap:wrap;gap:4px}
+    .card h3 small{font-size:10px}
+    table{font-size:11px}
+    th,td{padding:6px 5px}
+    .form-row{grid-template-columns:1fr 1fr}
+    .toolbar .grp:first-child,.toolbar .switch{flex:0 0 auto}
+  }
+  @media(max-width:480px){
+    .kpis{grid-template-columns:1fr 1fr}
+    .kpi .val{font-size:18px}
+    .kpi .lbl{font-size:10px}
+    .brand h1{font-size:14px}
+    .brand .logo{height:28px}
+    .seg button{padding:6px 9px;font-size:12px}
+    input[type=date]{font-size:12px;padding:5px 7px}
+    table{font-size:10.5px}
+    th,td{padding:6px 4px}
+    .chartbox{height:220px}
+    .form-row{grid-template-columns:1fr}
+    .mediagrid{grid-template-columns:1fr}
+    .legend{font-size:11px;gap:10px}
+    .legend span[style*="margin-left"]{margin-left:0 !important}
+  }
+</style>
+</head>
+<body>
+<header>
+  <!-- MARCA: troque a caixa abaixo pelo seu logo (ex.: <img src="logo.png" class="logo">) e o nome do cliente -->
+  <div class="brand">
+    <div style="width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,var(--cyan),var(--navy));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:15px">P</div>
+    <div><h1>Cliente — Painel de Performance</h1><small>Mídia (Meta) + funil comercial</small></div>
+  </div>
+  <div class="live">Período: <b id="periodLabel">—</b></div>
+</header>
+<div class="toolbar">
+  <div class="grp"><label>Período</label><div class="seg" id="presets"><button data-days="7">7 dias</button><button data-days="14">14 dias</button><button data-days="30" class="active">30 dias</button></div></div>
+  <div class="grp"><label>De</label><input type="date" id="dFrom"><label>Até</label><input type="date" id="dTo"></div>
+  <label class="switch"><input type="checkbox" id="cmp" checked> Comparar c/ período anterior</label>
+  <label class="switch"><input type="checkbox" id="showAds" checked> Mostrar anúncios/carros</label>
+  <div class="grp"><label>Canal</label><select id="canalSel" style="border:1px solid var(--line);border-radius:8px;padding:6px 9px;font-size:12.5px;color:var(--ink);background:var(--card2)"><option>Todos</option></select></div>
+</div>
+<main>
+  <div class="tabs">
+    <button class="tab active" data-tab="midia">Mídia &amp; Social</button>
+    <button class="tab" data-tab="comercial">Conversão &amp; Comercial</button>
+  </div>
+  <div id="tabMidia">
+    <div class="kpis" id="kpisMidia"></div>
+    <div class="grid2">
+      <div class="card"><h3>Evolução no tempo <small>leads · atual vs anterior</small></h3><div class="chartbox"><canvas id="lineChart"></canvas></div></div>
+      <div class="card"><h3>Métricas de mídia (Meta) <small>fonte: automática</small></h3><div class="mediagrid" id="media"></div><div class="src">Hook = 3s ÷ impressões · Hold = ThruPlay ÷ impressões · Retenção 75%/95% = assistiu até 75%/95% ÷ impressões.</div></div>
+    </div>
+    <div class="card" id="adsCard"><h3>Anúncios rodando <small id="adsSub">veiculação no período</small></h3><div class="tbl-wrap" style="max-height:360px"><table id="adsTable"><thead><tr><th data-col="anuncio" data-label="Anúncio / Carro">Anúncio / Carro</th><th data-col="status" data-label="Status">Status</th><th data-col="conv" data-label="Conversas">Conversas</th><th data-col="cpl" data-label="Custo/conv.">Custo/conv.</th><th data-col="orc" data-label="Orç./dia">Orç./dia</th><th data-col="spend" data-label="Investimento">Investimento</th></tr></thead><tbody></tbody></table></div></div>
+  </div>
+  <div id="tabComercial" style="display:none">
+    <div class="kpis" id="kpisComercial"></div>
+    <div class="card" style="margin-bottom:16px"><h3>Funil do período <small>Custo/Lead · Modelo Cliente (% total) · Modelo Comercial (% etapa)</small></h3><table class="ftable"><thead><tr><th>Etapa</th><th>Total</th><th>Custo/Lead</th><th>Mod. Cliente</th><th>Mod. Comercial</th></tr></thead><tbody id="funnelBody"></tbody></table></div>
+    <div class="card" style="margin-bottom:16px"><h3>ROI por canal <small id="canalSub">gasto × receita/margem no período · clique nos títulos p/ ordenar</small></h3><div class="tbl-wrap" style="max-height:300px"><table id="canalTable"><thead><tr><th data-col="canal" data-label="Canal">Canal</th><th data-col="gasto" data-label="Gasto">Gasto</th><th data-col="vendas" data-label="Vendas">Vendas</th><th data-col="receita" data-label="Receita">Receita</th><th data-col="margem" data-label="Margem">Margem</th><th data-col="roas" data-label="ROAS">ROAS</th><th data-col="roi" data-label="ROI">ROI</th></tr></thead><tbody id="canalBody"></tbody></table></div></div><div class="entry"><div class="card"><h3>➕ Registrar venda <small>por canal — destrava o lucro por canal</small></h3><div class="form-row"><div class="field"><label>Data</label><input type="date" id="v_date"></div><div class="field"><label>Canal</label><select id="v_canal" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--card2);color:var(--ink)"><option>Meta</option><option>Google Ads</option><option>Orgânico</option><option>Indicação</option><option>Outro</option></select></div><div class="field"><label>Veículo</label><input type="text" id="v_veiculo"></div></div><div class="form-row"><div class="field"><label>Valor da venda (R$)</label><input type="number" id="v_valor" step="0.01"></div><div class="field"><label>Margem/lucro (R$)</label><input type="number" id="v_margem" step="0.01"></div></div><div style="display:flex;gap:8px"><button class="btn" id="saveVenda">Salvar venda</button></div><div class="src">No modo e-commerce as vendas vêm do GA4 automaticamente e este campo fica opcional.</div></div><div class="card"><h3>Últimas vendas</h3><div class="tbl-wrap"><table id="vendasTable"><thead><tr><th>Data</th><th>Canal</th><th>Veículo</th><th>Valor</th><th>Margem</th></tr></thead><tbody id="vendasBody"></tbody></table></div></div></div><div class="entry">
+      <div class="card">
+        <h3>➕ Registrar dia — dados do time comercial</h3>
+        <div class="form-row"><div class="field"><label>Data</label><input type="date" id="f_date"></div><div class="field"><label>Pré-venda</label><input type="number" id="f_preVenda"></div><div class="field"><label>Vendedor (retorno)</label><input type="number" id="f_retorno"></div></div>
+        <div class="form-row"><div class="field"><label>Contato efetivo</label><input type="number" id="f_emContato"></div><div class="field"><label>Negociação</label><input type="number" id="f_emNeg"></div><div class="field"><label>Vendas</label><input type="number" id="f_vendas"></div></div>
+        <div class="form-row"><div class="field"><label>Negociações perdidas</label><input type="number" id="f_negPerdidas"></div><div class="field"><label>Leads perdidos</label><input type="number" id="f_leadsPerdidos"></div><div class="field"><label>Receita — vendas (R$)</label><input type="number" id="f_receita" step="0.01"></div></div>
+        <div class="form-row"><div class="field"><label>Margem/lucro (R$)</label><input type="number" id="f_margem" step="0.01"></div></div>
+        <div style="display:flex;gap:8px"><button class="btn" id="save">Salvar dia</button><button class="btn ghost" id="seedBtn">Recarregar do servidor</button></div>
+        <div class="src">Leads, investimento e métricas de mídia vêm automáticos da Meta. O comercial preenche do pré-venda em diante + receita/margem.</div>
+      </div>
+      <div class="card"><h3>Últimos lançamentos</h3><div class="tbl-wrap"><table id="dataTable"><thead><tr><th data-col="date" data-label="Data">Data</th><th data-col="entradas" data-label="Leads">Leads</th><th data-col="preVenda" data-label="Pré-venda">Pré-venda</th><th data-col="vendas" data-label="Vendas">Vendas</th><th data-col="receita" data-label="Receita">Receita</th></tr></thead><tbody></tbody></table></div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:4px"><div class="legend">
+    <span><span class="dot" style="background:var(--green)"></span>Crescimento / conversão saudável</span>
+    <span><span class="dot" style="background:var(--amber)"></span>Estagnação / atenção</span>
+    <span><span class="dot" style="background:var(--red)"></span>Redução / gargalo</span>
+    <span style="margin-left:auto">ROAS = receita ÷ investimento · ROI = (margem − investimento) ÷ investimento</span>
+  </div></div>
+</main>
+<footer>Painel de Performance · <b>[SUA AGÊNCIA / MARCA]</b></footer>
+<script>
+const KEY="painel_wl_v2";
+const API=""; // <<< COLE AQUI, ENTRE AS ASPAS, A URL /exec DO SEU APPS SCRIPT
+const REALDATA=[];
+let ADS_ROWS=[],GADS_ROWS=[],VENDAS_ROWS=[];
+
+const FUNNEL=[{k:"entradas",l:"leads",ref:null},{k:"preVenda",l:"pré-venda",ref:"entradas"},{k:"retorno",l:"vendedor",ref:"preVenda"},{k:"emContato",l:"contato efetivo",ref:"retorno"},{k:"emNeg",l:"negociação",ref:"retorno"},{k:"vendas",l:"vendas",ref:"retorno"},{k:"negPerdidas",l:"negociações perdidas",ref:"preVenda",loss:true},{k:"leadsPerdidos",l:"leads perdidos",ref:"entradas",loss:true}];
+const MDEF={investimento:{label:"Investimento",fmt:"money",invert:true},entradas:{label:"Leads (conversas Meta)",fmt:"int"},cpl:{label:"Custo/Lead",fmt:"money",invert:true},ctr:{label:"CTR",fmt:"pct"},cpm:{label:"CPM",fmt:"money",invert:true},vendas:{label:"Vendas",fmt:"int"},receita:{label:"Receita",fmt:"money"},cac:{label:"CAC (custo/venda)",fmt:"money",invert:true},roas:{label:"ROAS",fmt:"x"},roi:{label:"ROI",fmt:"pct"},txVenda:{label:"Conv. Lead→Venda",fmt:"pct"}};
+const MIDIA=["investimento","entradas","cpl","ctr","cpm"];
+const COM=["vendas","receita","cac","roas","roi","txVenda"];
+let lineChart,MEM=null;var adsSort={col:"conv",dir:-1};var comSort={col:"date",dir:-1};var canalSort={col:"roi",dir:-1};
+function todayISO(d){d=d||new Date();return d.toISOString().slice(0,10)}
+function fmt(v,t){v=v||0;if(t==="money")return "R$ "+v.toLocaleString("pt-BR",{maximumFractionDigits:0});if(t==="pct")return v.toFixed(1)+"%";if(t==="x")return v.toFixed(1)+"x";return Math.round(v).toLocaleString("pt-BR")}
+function load(){if(MEM!==null)return MEM;try{var j=localStorage.getItem(KEY);if(j)MEM=JSON.parse(j)}catch(e){}if(MEM===null)MEM=[];return MEM}
+function save(d){MEM=d;try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+function fetchData(){fetch(API+(API.indexOf("?")>=0?"&":"?")+"t="+Date.now()).then(function(r){return r.json()}).then(function(d){MEM=Array.isArray(d)?d:[];render()}).catch(function(){MEM=REALDATA.slice();render()})}
+function fetchAds(){fetch(API+"?ads=1&t="+Date.now()).then(function(r){return r.json()}).then(function(d){ADS_ROWS=Array.isArray(d)?d:[];drawAds(document.getElementById("dFrom").value,document.getElementById("dTo").value)}).catch(function(){ADS_ROWS=[]})}
+function setPreset(days){var to=new Date();var from=new Date();from.setDate(to.getDate()-(days-1));document.getElementById("dFrom").value=todayISO(from);document.getElementById("dTo").value=todayISO(to)}
+function daysBetween(a,b){return Math.round((new Date(b)-new Date(a))/86400000)+1}
+function sumRange(data,f,t){var rows=data.filter(function(r){return r.date>=f&&r.date<=t});var s={investimento:0,entradas:0,preVenda:0,retorno:0,emContato:0,emNeg:0,vendas:0,negPerdidas:0,leadsPerdidos:0,receita:0,margem:0,impressions:0,clicks:0,v3:0,thru:0,vp75:0,vp95:0};rows.forEach(function(r){for(var k in s)s[k]+=(+r[k]||0)});s.cac=s.vendas?s.investimento/s.vendas:0;s.cpl=s.entradas?s.investimento/s.entradas:0;s.roas=s.investimento?s.receita/s.investimento:0;s.roi=s.investimento?(s.margem-s.investimento)/s.investimento*100:0;s.ctr=s.impressions?100*s.clicks/s.impressions:0;s.cpm=s.impressions?1000*s.investimento/s.impressions:0;s.hook=s.impressions?100*s.v3/s.impressions:0;s.hold=s.impressions?100*s.thru/s.impressions:0;s.ret75=s.impressions?100*s.vp75/s.impressions:0;s.ret95=s.impressions?100*s.vp95/s.impressions:0;s.txVenda=s.entradas?100*s.vendas/s.entradas:0;return s}
+function dc(cur,prev,invert){if(!prev)return"flat";var ch=(cur-prev)/prev*100;var g=invert?-ch:ch;if(g>3)return"up";if(g<-3)return"down";return"flat"}
+function arrow(c){return c==="up"?"▲":c==="down"?"▼":"▬"}
+function convCls(pp){if(pp>=50)return"up";if(pp<25)return"down";return"flat"}
+function renderKpis(id,list,cur,prev,cmp){var kp=document.getElementById(id);kp.innerHTML="";list.forEach(function(k){var m=MDEF[k];var cls=cmp?dc(cur[k],prev[k],m.invert):"flat";var ch=prev[k]?((cur[k]-prev[k])/prev[k]*100):0;var el=document.createElement("div");el.className="kpi";el.innerHTML='<span class="bar '+(cmp?cls:"")+'"></span><div class="lbl">'+m.label+'</div><div class="val">'+fmt(cur[k],m.fmt)+'</div>'+(cmp?'<span class="delta '+cls+'">'+arrow(cls)+" "+Math.abs(ch).toFixed(1)+'%</span><div class="prev">ant.: '+fmt(prev[k],m.fmt)+"</div>":"");kp.appendChild(el)})}
+function render(){var data=load();var f=document.getElementById("dFrom").value,t=document.getElementById("dTo").value;if(!f||!t)return;document.getElementById("periodLabel").textContent=f.split("-").reverse().join("/")+" – "+t.split("-").reverse().join("/");var len=daysBetween(f,t);var pf=todayISO(new Date(new Date(f)-len*86400000)),pt=todayISO(new Date(new Date(f)-86400000));var cur=sumRange(data,f,t),prev=sumRange(data,pf,pt),cmp=document.getElementById("cmp").checked;renderKpis("kpisMidia",MIDIA,cur,prev,cmp);renderKpis("kpisComercial",COM,cur,prev,cmp);drawFunnel(cur);drawMedia(cur,prev,cmp);drawLine(data,f,t,pf,pt,cmp);drawTable(data);drawAds(f,t);var _canal=(document.getElementById("canalSel")||{}).value||"Todos";drawCanalROI(f,t,_canal);drawVendas(f,t,_canal)}
+function drawFunnel(cur){var tb=document.getElementById("funnelBody");tb.innerHTML="";var inv=cur.investimento||0;var base=cur.entradas||1;FUNNEL.forEach(function(x){var q=cur[x.k]||0;var custo=q?inv/q:0;var cliente=100*q/base;var comercial=x.ref?(cur[x.ref]?100*q/cur[x.ref]:0):100;var cCls=x.loss?"down":convCls(comercial);var tr=document.createElement("tr");if(x.loss)tr.className="loss";tr.innerHTML='<td>'+x.l+'</td><td>'+q+'</td><td class="'+(x.k==="vendas"?"hi":"")+'">'+fmt(custo,"money")+'</td><td>'+cliente.toFixed(0)+'%</td><td class="pc '+cCls+'">'+comercial.toFixed(0)+'%</td>';tb.appendChild(tr)})}
+function drawMedia(cur,prev,cmp){var wrap=document.getElementById("media");wrap.innerHTML="";var tiles=[["CTR","ctr","pct",false],["CPM","cpm","money",true],["Hook Rate","hook","pct",false],["Hold Rate","hold","pct",false],["Retenção 75%","ret75","pct",false],["Retenção 95%","ret95","pct",false]];tiles.forEach(function(a){var lbl=a[0],k=a[1],ft=a[2],inv=a[3];var cls=cmp?dc(cur[k],prev[k],inv):"flat";var ch=prev[k]?((cur[k]-prev[k])/prev[k]*100):0;var el=document.createElement("div");el.className="mtile";el.innerHTML='<div class="l">'+lbl+'</div><div class="v">'+fmt(cur[k],ft)+'</div>'+(cmp?'<div class="d '+cls+'">'+arrow(cls)+" "+Math.abs(ch).toFixed(1)+"%</div>":"");wrap.appendChild(el)})}
+function seriesByDay(data,f,t){var out=[];var d=new Date(f);var end=new Date(t);while(d<=end){var iso=todayISO(d);var r=null;for(var i=0;i<data.length;i++){if(data[i].date===iso){r=data[i];break}}r=r||{};out.push({date:iso,entradas:+r.entradas||0,vendas:+r.vendas||0});d.setDate(d.getDate()+1)}return out}
+function drawLine(data,f,t,pf,pt,cmp){var cur=seriesByDay(data,f,t),prev=seriesByDay(data,pf,pt);var labels=cur.map(function(x){return x.date.slice(8,10)+"/"+x.date.slice(5,7)});var ds=[];var map={entradas:"#1BB7E8",vendas:"#37c26b"};[["entradas","Leads"],["vendas","Vendas"]].forEach(function(pp){var k=pp[0],lbl=pp[1];ds.push({label:lbl,data:cur.map(function(x){return x[k]}),borderColor:map[k],tension:.35,pointRadius:0,borderWidth:2});if(cmp)ds.push({label:lbl+" (ant.)",data:prev.map(function(x){return x[k]}),borderColor:map[k],borderDash:[4,4],tension:.35,pointRadius:0,borderWidth:1.1})});if(lineChart)lineChart.destroy();lineChart=new Chart(document.getElementById("lineChart"),{type:"line",data:{labels:labels,datasets:ds},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:"#c7d2db",boxWidth:12,font:{size:11}}}},scales:{y:{beginAtZero:true,grid:{color:"#25333f"},ticks:{color:"#8ea0ad"}},x:{grid:{display:false},ticks:{color:"#8ea0ad",maxTicksLimit:12,font:{size:10}}}}}})}
+function drawTable(data){var tb=document.querySelector("#dataTable tbody");tb.innerHTML="";var rows=data.slice();var _c=comSort.col,_d=comSort.dir;rows.sort(function(a,b){if(_c==="date")return _d*String(a.date||"").localeCompare(String(b.date||""));return _d*((+a[_c]||0)-(+b[_c]||0))});rows.slice(0,60).forEach(function(r){var tr=document.createElement("tr");tr.innerHTML='<td>'+r.date.split("-").reverse().join("/")+'</td><td>'+fmt(r.entradas,"int")+'</td><td>'+fmt(r.preVenda,"int")+'</td><td>'+fmt(r.vendas,"int")+'</td><td>'+fmt(r.receita,"money")+'</td>';tb.appendChild(tr)});updateComHead_()}
+function drawAds(from,to){var tb=document.querySelector("#adsTable tbody");tb.innerHTML="";var sub=document.getElementById("adsSub");var agg={},order=[];ADS_ROWS.forEach(function(r){if(!from||!to)return;if(r.date<from||r.date>to)return;if((+r.spend||0)<=0&&(+r.conv||0)<=0)return;var a=agg[r.ad_id];if(!a){a=agg[r.ad_id]={anuncio:r.anuncio,conjunto:r.conjunto,status:r.status,orc:+r.orc||0,orcKey:r.orcKey,spend:0,conv:0};order.push(r.ad_id)}a.spend+=(+r.spend||0);a.conv+=(+r.conv||0);a.status=r.status;a.orc=+r.orc||0;a.orcKey=r.orcKey});var list=order.map(function(id){return agg[id]});list.forEach(function(a){a.cpl=a.conv?a.spend/a.conv:0});var _sc=adsSort.col,_sd=adsSort.dir;list.sort(function(x,y){if(_sc==="anuncio")return _sd*String(x.anuncio||"").localeCompare(String(y.anuncio||""),"pt");var vx,vy;if(_sc==="status"){vx=x.status==="ACTIVE"?1:0;vy=y.status==="ACTIVE"?1:0}else if(_sc==="cpl"){vx=x.cpl;vy=y.cpl}else if(_sc==="orc"){vx=x.orc;vy=y.orc}else if(_sc==="spend"){vx=x.spend;vy=y.spend}else{vx=x.conv;vy=y.conv}return _sd*(vx-vy)});updateAdsHead_();var totSpend=0,totConv=0,totBud=0,ativos=0,budSeen={};if(!list.length){tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:14px">Sem anúncios com veiculação neste período.</td></tr>';if(sub)sub.textContent="veiculação no período";return}list.forEach(function(a){var ativo=(a.status==="ACTIVE");var cpl=a.conv?a.spend/a.conv:0;var cls=a.conv===0?"":(cpl<=12?"up":(cpl<=20?"flat":"down"));var stCls=ativo?"up":"down",stTxt=ativo?"Ativo":"Desativado";var sub2=(a.conjunto&&a.conjunto!==a.anuncio)?'<div style="font-size:10px;color:var(--muted)">'+a.conjunto+'</div>':"";var tr=document.createElement("tr");tr.innerHTML='<td><div>'+a.anuncio+'</div>'+sub2+'</td><td><span class="pc '+stCls+'">'+stTxt+'</span></td><td>'+a.conv+'</td><td class="pc '+cls+'">'+(a.conv?fmt(cpl,"money"):"—")+'</td><td>'+(a.orc?fmt(a.orc,"money"):"—")+'</td><td>'+fmt(a.spend,"money")+'</td>';tb.appendChild(tr);totSpend+=a.spend;totConv+=a.conv;if(ativo)ativos++;if(ativo&&a.orc>0&&!budSeen[a.orcKey]){budSeen[a.orcKey]=1;totBud+=a.orc}});var tf=document.createElement("tr");tf.style.borderTop="2px solid var(--cyan)";tf.style.fontWeight="700";tf.innerHTML='<td>TOTAL — '+list.length+' anúncios · '+ativos+' ativos</td><td></td><td>'+totConv+'</td><td></td><td class="hi">'+fmt(totBud,"money")+'</td><td>'+fmt(totSpend,"money")+'</td>';tb.appendChild(tf);if(sub)sub.textContent="veiculação no período · orçamento ativo/dia: "+fmt(totBud,"money")}
+document.querySelectorAll(".tab").forEach(function(b){b.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(function(x){x.classList.remove("active")});b.classList.add("active");var tv=b.getAttribute("data-tab");document.getElementById("tabMidia").style.display=tv==="midia"?"":"none";document.getElementById("tabComercial").style.display=tv==="comercial"?"":"none"})});
+document.getElementById("presets").addEventListener("click",function(e){if(e.target.dataset.days){document.querySelectorAll("#presets button").forEach(function(b){b.classList.remove("active")});e.target.classList.add("active");setPreset(+e.target.dataset.days);render()}});
+document.getElementById("dFrom").addEventListener("change",render);document.getElementById("dTo").addEventListener("change",render);document.getElementById("cmp").addEventListener("change",render);
+document.getElementById("save").addEventListener("click",function(){var d=document.getElementById("f_date").value;if(!d){alert("Escolha a data");return}var g=function(id){var e=document.getElementById(id);return e?(+e.value||0):0};var clr=function(){["preVenda","retorno","emContato","emNeg","vendas","negPerdidas","leadsPerdidos","receita","margem"].forEach(function(k){var e=document.getElementById("f_"+k);if(e)e.value=""})};if(API){var payload={date:d,pre_venda:g("f_preVenda"),retorno_vendedor:g("f_retorno"),em_contato_efetivo:g("f_emContato"),em_negociacao:g("f_emNeg"),vendas:g("f_vendas"),negociacoes_perdidas:g("f_negPerdidas"),leads_perdidos:g("f_leadsPerdidos"),receita:g("f_receita"),margem:g("f_margem")};fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)}).then(function(){clr();setTimeout(fetchData,700)}).catch(function(){alert("Falha ao salvar no servidor")})}else{var rec={date:d};["preVenda","retorno","emContato","emNeg","vendas","negPerdidas","leadsPerdidos","receita","margem"].forEach(function(k){rec[k]=g("f_"+k)});var data=load();var i=data.findIndex(function(x){return x.date===d});if(i>=0){data[i]=Object.assign(data[i],rec)}else data.push(rec);save(data);render();clr()}});
+document.getElementById("seedBtn").addEventListener("click",function(){if(API){fetchData()}else{save(JSON.parse(JSON.stringify(REALDATA)));render()}});
+function updateComHead_(){document.querySelectorAll("#dataTable thead th").forEach(function(th){var l=th.getAttribute("data-label")||th.textContent;th.setAttribute("data-label",l);th.textContent=l+(th.getAttribute("data-col")===comSort.col?(comSort.dir>0?" \u25B2":" \u25BC"):"")})}
+document.querySelector("#dataTable thead").addEventListener("click",function(e){var th=e.target.closest("th");if(!th||!th.getAttribute("data-col"))return;var c=th.getAttribute("data-col");if(comSort.col===c)comSort.dir*=-1;else{comSort.col=c;comSort.dir=(c==="date")?-1:-1}render()});
+function updateAdsHead_(){document.querySelectorAll("#adsTable thead th").forEach(function(th){var l=th.getAttribute("data-label")||th.textContent;th.setAttribute("data-label",l);th.textContent=l+(th.getAttribute("data-col")===adsSort.col?(adsSort.dir>0?" \u25B2":" \u25BC"):"")})}
+document.querySelector("#adsTable thead").addEventListener("click",function(e){var th=e.target.closest("th");if(!th||!th.getAttribute("data-col"))return;var c=th.getAttribute("data-col");if(adsSort.col===c)adsSort.dir*=-1;else{adsSort.col=c;adsSort.dir=(c==="anuncio")?1:-1}drawAds(document.getElementById("dFrom").value,document.getElementById("dTo").value)});
+function canalCanon(n){n=String(n||"").toLowerCase();if(/meta|face|insta|paid social|paid_social/.test(n))return "Meta";if(/google ads|paid search|paid_search|adwords|cpc/.test(n))return "Google Ads";if(/organic|orgânico|organico|seo/.test(n))return "Orgânico";if(/direct|direto/.test(n))return "Direto";if(/referr|indica/.test(n))return "Indicação";if(/mail/.test(n))return "E-mail";if(!n)return "Outro";return n.charAt(0).toUpperCase()+n.slice(1)}
+function spendByCanal(from,to){var s={};load().forEach(function(r){if(r.date>=from&&r.date<=to)s["Meta"]=(s["Meta"]||0)+(+r.investimento||0)});GADS_ROWS.forEach(function(r){if(r.date>=from&&r.date<=to)s["Google Ads"]=(s["Google Ads"]||0)+(+r.custo||0)});return s}
+function updateCanalHead_(){document.querySelectorAll("#canalTable thead th").forEach(function(th){var l=th.getAttribute("data-label")||th.textContent;th.setAttribute("data-label",l);th.textContent=l+(th.getAttribute("data-col")===canalSort.col?(canalSort.dir>0?" ▲":" ▼"):"")})}
+function drawCanalROI(from,to,filtro){var tb=document.getElementById("canalBody");if(!tb)return;tb.innerHTML="";var gasto=spendByCanal(from,to);var agg={};Object.keys(gasto).forEach(function(c){agg[c]={gasto:gasto[c],vendas:0,receita:0,margem:0}});VENDAS_ROWS.forEach(function(v){if(v.date<from||v.date>to)return;var c=canalCanon(v.canal);var a=agg[c]=agg[c]||{gasto:gasto[c]||0,vendas:0,receita:0,margem:0};a.vendas++;a.receita+=(+v.valor||0);a.margem+=(+v.margem||0)});var list=Object.keys(agg).map(function(c){var a=agg[c];a.canal=c;a.roas=a.gasto?a.receita/a.gasto:0;a.roi=a.gasto?((a.margem-a.gasto)/a.gasto*100):0;return a});if(filtro&&filtro!=="Todos")list=list.filter(function(a){return a.canal===filtro});var sc=canalSort.col,sd=canalSort.dir;list.sort(function(x,y){if(sc==="canal")return sd*String(x.canal).localeCompare(String(y.canal),"pt");return sd*((x[sc]||0)-(y[sc]||0))});updateCanalHead_();if(!list.length){tb.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:12px">Sem dados de canal no período. Registre vendas com canal ou configure o GA4.</td></tr>';return}var tG=0,tV=0,tR=0,tM=0;list.forEach(function(a){var roiCls=a.gasto?(a.roi>0?"up":(a.roi<0?"down":"flat")):"flat";var tr=document.createElement("tr");tr.innerHTML='<td>'+a.canal+'</td><td>'+fmt(a.gasto,"money")+'</td><td>'+a.vendas+'</td><td>'+fmt(a.receita,"money")+'</td><td>'+fmt(a.margem,"money")+'</td><td>'+(a.gasto?a.roas.toFixed(1)+"x":"—")+'</td><td class="pc '+roiCls+'">'+(a.gasto?a.roi.toFixed(0)+"%":"—")+'</td>';tb.appendChild(tr);tG+=a.gasto;tV+=a.vendas;tR+=a.receita;tM+=a.margem});var roiT=tG?((tM-tG)/tG*100):0,roasT=tG?tR/tG:0;var tf=document.createElement("tr");tf.style.borderTop="2px solid var(--cyan)";tf.style.fontWeight="700";tf.innerHTML='<td>TOTAL</td><td>'+fmt(tG,"money")+'</td><td>'+tV+'</td><td>'+fmt(tR,"money")+'</td><td>'+fmt(tM,"money")+'</td><td>'+(tG?roasT.toFixed(1)+"x":"—")+'</td><td class="hi">'+(tG?roiT.toFixed(0)+"%":"—")+'</td>';tb.appendChild(tf)}
+function drawVendas(from,to,filtro){var tb=document.getElementById("vendasBody");if(!tb)return;tb.innerHTML="";var rows=VENDAS_ROWS.filter(function(v){return v.date>=from&&v.date<=to&&(!filtro||filtro==="Todos"||canalCanon(v.canal)===filtro)});rows.sort(function(a,b){return String(b.date).localeCompare(String(a.date))});if(!rows.length){tb.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:10px">Sem vendas no período.</td></tr>';return}rows.slice(0,60).forEach(function(v){var tr=document.createElement("tr");tr.innerHTML='<td>'+String(v.date).split("-").reverse().join("/")+'</td><td>'+canalCanon(v.canal)+'</td><td>'+(v.veiculo||"—")+'</td><td>'+fmt(v.valor,"money")+'</td><td>'+fmt(v.margem,"money")+'</td>';tb.appendChild(tr)})}
+function popularCanais(){var sel=document.getElementById("canalSel");if(!sel)return;var cur=sel.value||"Todos";var set={"Meta":1};if(GADS_ROWS.length)set["Google Ads"]=1;VENDAS_ROWS.forEach(function(v){set[canalCanon(v.canal)]=1});var opts=["Todos"].concat(Object.keys(set).sort());sel.innerHTML=opts.map(function(o){return '<option'+(o===cur?" selected":"")+'>'+o+'</option>'}).join("")}
+function fetchGads(){if(!API)return;fetch(API+"?gads=1&t="+Date.now()).then(function(r){return r.json()}).then(function(d){GADS_ROWS=Array.isArray(d)?d:[];popularCanais();render()}).catch(function(){GADS_ROWS=[]})}
+function fetchVendas(){if(!API)return;fetch(API+"?vendas=1&t="+Date.now()).then(function(r){return r.json()}).then(function(d){VENDAS_ROWS=Array.isArray(d)?d:[];popularCanais();render()}).catch(function(){VENDAS_ROWS=[]})}
+document.querySelector("#canalTable thead").addEventListener("click",function(e){var th=e.target.closest("th");if(!th||!th.getAttribute("data-col"))return;var c=th.getAttribute("data-col");if(canalSort.col===c)canalSort.dir*=-1;else{canalSort.col=c;canalSort.dir=(c==="canal")?1:-1}render()});
+(function(){var cs=document.getElementById("canalSel");if(cs)cs.addEventListener("change",render);var sv=document.getElementById("saveVenda");if(sv)sv.addEventListener("click",function(){var d=document.getElementById("v_date").value;if(!d){alert("Escolha a data da venda");return}var payload={tipo:"venda",date:d,canal:document.getElementById("v_canal").value,veiculo:document.getElementById("v_veiculo").value,valor:+document.getElementById("v_valor").value||0,margem:+document.getElementById("v_margem").value||0};if(API){fetch(API,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(payload)}).then(function(){["v_veiculo","v_valor","v_margem"].forEach(function(id){document.getElementById(id).value=""});setTimeout(fetchVendas,700)}).catch(function(){alert("Falha ao salvar a venda")})}else{alert("Configure a API para salvar vendas")}})})();
+(function(){document.getElementById("dFrom").value="2026-07-01";document.getElementById("dTo").value="2026-07-14";document.querySelectorAll("#presets button").forEach(function(b){b.classList.remove("active")});document.getElementById("f_date").value=todayISO();if(API){fetchData();fetchAds();fetchGads();fetchVendas()}else{var d=load();if(!d.length){save(JSON.parse(JSON.stringify(REALDATA)))}render()}})();
+</script>
+</body>
+</html>
